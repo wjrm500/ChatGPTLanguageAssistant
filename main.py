@@ -82,35 +82,25 @@ def chat(user_input):
     tokens_used = completion.usage.total_tokens
     total_tokens_used += tokens_used
     
-    final_ai_output = """
-Input
------
-{user_input}
-
-Correction
+    correction = """Correction
 ----------
 {correction}
 
-Explanation of corrections
+Explanation
 --------------------------
 {explanation}
-
-Response
---------
-{response}
 """.format(
-    user_input=user_input,
     correction=" ".join(corrected_sentences),
-    explanation=correction_explanation,
-    response=ai_output
+    explanation=correction_explanation
 )
-    return final_ai_output, accountant_message(total_tokens_used)
+    return correction, ai_output, accountant_message(total_tokens_used)
 
 demo = gradio.Interface(
     fn=chat,
     inputs=gradio.inputs.Textbox(label="User input", lines=2, placeholder="Say something..."),
     outputs=[
-        gradio.outputs.Textbox(label="Assistant"),
+        gradio.outputs.Textbox(label="Correction"),
+        gradio.outputs.Textbox(label="Response"),
         gradio.outputs.Textbox(label="Accountant")
     ],
     title="Spanish Language Tutor",
