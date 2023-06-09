@@ -24,6 +24,22 @@ total_tokens_used = 0
 def accountant_message(total_tokens_used):
     return f"You've spent ${COST_PER_1K_TOKENS * total_tokens_used / 1000:.3f} USD on this conversation."
 
+def get_response(user_input):
+    global main_message_history
+    global total_tokens_used
+
+    main_message_history.append({"role": "user", "content": user_input})
+    print("Making request...")
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=main_message_history
+    )
+    response = completion.choices[0].message.content
+    main_message_history.append({"role": "assistant", "content": response})
+    tokens_used = completion.usage.total_tokens
+    total_tokens_used += tokens_used
+    return response
+
 def get_corrected_sentence(input_sentence):
     global total_tokens_used
 
@@ -77,7 +93,10 @@ def chat(user_input):
     input_sentences = re.split(split_regex, user_input)
     
     with ThreadPoolExecutor() as executor:
-        corrected_sentences_futures = [executor.submit(get_corrected_sentence, input_sentence) for input_sentence in input_sentences]
+        response_future = executor.submit(get_response, user_input)
+        corrected_sentences_futures = [executor.submit(get_corrected_sentence, sentence) for sentence in input_sentences]
+        
+        response = response_future.result()
         corrected_sentences = [future.result() for future in corrected_sentences_futures]
 
         correction_explanations_futures = [executor.submit(get_correction_explanation, input_sentence, corrected_sentence) for input_sentence, corrected_sentence in zip(input_sentences, corrected_sentences)]
