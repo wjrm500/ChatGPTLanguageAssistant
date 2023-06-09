@@ -1,10 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
+import logging
 import os
 import re
 
 from dotenv import load_dotenv
 import gradio
 import openai
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
+logger = logging.getLogger()
 
 load_dotenv()
 
@@ -27,9 +31,8 @@ def accountant_message(total_tokens_used):
 def get_response(user_input):
     global main_message_history
     global total_tokens_used
-
     main_message_history.append({"role": "user", "content": user_input})
-    print("Making request...")
+    logger.info("Making request for main response...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=main_message_history
@@ -42,52 +45,36 @@ def get_response(user_input):
 
 def get_corrected_sentence(input_sentence):
     global total_tokens_used
-
     prompt = PROMPT_TRANSLATE_SENTENCE.format(sentence=input_sentence)
-    print("Making request...")
+    logger.info("Making request for corrected sentence...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": prompt}
         ]
     )
-    ai_output = completion.choices[0].message.content.replace("\"", "")
+    corrected_sentence = completion.choices[0].message.content.replace("\"", "")
     tokens_used = completion.usage.total_tokens
     total_tokens_used += tokens_used
-
-    return ai_output
+    return corrected_sentence
 
 def get_correction_explanation(input_sentence, corrected_sentence):
     global total_tokens_used
-
     prompt = PROMPT_ANALYSE_CORRECTION.format(input_sentence=input_sentence, corrected_sentence=corrected_sentence)
-    print("Making request...")
+    logger.info("Making request for correction explanation...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": prompt}
         ]
     )
-    ai_output = completion.choices[0].message.content
+    correction_explanation = completion.choices[0].message.content
     tokens_used = completion.usage.total_tokens
     total_tokens_used += tokens_used
-
-    return ai_output
+    return correction_explanation
 
 def chat(user_input):
-    global main_message_history
-    global total_tokens_used
-
-    main_message_history.append({"role": "user", "content": user_input})
-    print("Making request...")
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=main_message_history
-    )
-    response = completion.choices[0].message.content
-    main_message_history.append({"role": "assistant", "content": response})
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
+    logger.info("Chat initiated by user...")
 
     split_regex = r"(?<=[.!?])\s+"
     input_sentences = re.split(split_regex, user_input)
@@ -114,7 +101,7 @@ def chat(user_input):
     ]
     correction_explanations = [x for x in correction_explanations if all([check(x) for check in checks])]
     correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(correction_explanations, 1)])
-    
+
     correction_message = "{correction}\n\n{explanation}".format(
         correction=" ".join(corrected_sentences),
         explanation=correction_explanation
