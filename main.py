@@ -28,6 +28,17 @@ def chat(user_input):
     global main_message_history
     global total_tokens_used
 
+    main_message_history.append({"role": "user", "content": user_input})
+    print("Making request...")
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=main_message_history
+    )
+    response = completion.choices[0].message.content
+    main_message_history.append({"role": "assistant", "content": response})
+    tokens_used = completion.usage.total_tokens
+    total_tokens_used += tokens_used
+
     split_regex = r"(?<=[.!?])\s+"
     input_sentences = re.split(split_regex, user_input)
     corrected_sentences = []
@@ -67,26 +78,16 @@ def chat(user_input):
         lambda x: "brackets" not in x,
         lambda x: "exclamation mark" not in x,
         lambda x: "exclamation point" not in x,
+        lambda x: "corrected sentence" not in x,
     ]
     correction_explanations = [x for x in correction_explanations if all([check(x) for check in checks])]
     correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(correction_explanations, 1)])
-
-    main_message_history.append({"role": "user", "content": user_input})
-    print("Making request...")
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=main_message_history
-    )
-    ai_output = completion.choices[0].message.content
-    main_message_history.append({"role": "assistant", "content": ai_output})
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
     
     correction_message = "{correction}\n\n{explanation}".format(
         correction=" ".join(corrected_sentences),
         explanation=correction_explanation
     )
-    return correction_message, ai_output, accountant_message(total_tokens_used)
+    return correction_message, response, accountant_message(total_tokens_used)
 
 demo = gradio.Interface(
     fn=chat,
