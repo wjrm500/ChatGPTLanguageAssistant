@@ -59,7 +59,16 @@ def chat(user_input):
         correction_explanations.append(ai_output)
         tokens_used = completion.usage.total_tokens
         total_tokens_used += tokens_used
-    correction_explanations = [y.split("|")[1].strip() for x in correction_explanations for y in x.split("\n") if "|" in y]
+    correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
+    checks = [
+        lambda x: not x.startswith("No changes"),
+        lambda x: not x.startswith("No other changes"),
+        lambda x: "accent" not in x,
+        lambda x: "brackets" not in x,
+        lambda x: "exclamation mark" not in x,
+        lambda x: "exclamation point" not in x,
+    ]
+    correction_explanations = [x for x in correction_explanations if all([check(x) for check in checks])]
     correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(correction_explanations, 1)])
 
     main_message_history.append({"role": "user", "content": user_input})
