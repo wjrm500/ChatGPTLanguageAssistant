@@ -1,0 +1,7 @@
+Provide a corrected Spanish translation of the following sentence:
+
+"{sentence}"
+
+Your answer should be a single sentence in quotation marks, nothing more.
+
+If the input sentence includes an English word inside square brackets, simply translate the word into Spanish and remove the square brackets.

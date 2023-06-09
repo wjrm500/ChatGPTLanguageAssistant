@@ -1,0 +1,5 @@
+Compare these two Spanish sentences, and provide a detailed breakdown of what has changed from the original to the modified version, and why it was changed. Give your answer as a numbered list, with each item in the list representing a single change. The numbered list should be of the form "1 | A was changed because of B\n2 | C was changed because of D". If no changes were made, simply output "No changes." If only one change was made, a numbered list of length one is fine.
+
+Original sentence: "{input_sentence}"
+
+Corrected sentence: "{corrected_sentence}"
