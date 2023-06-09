@@ -82,18 +82,11 @@ def chat(user_input):
     tokens_used = completion.usage.total_tokens
     total_tokens_used += tokens_used
     
-    correction = """Correction
-----------
-{correction}
-
-Explanation
---------------------------
-{explanation}
-""".format(
-    correction=" ".join(corrected_sentences),
-    explanation=correction_explanation
-)
-    return correction, ai_output, accountant_message(total_tokens_used)
+    correction_message = "{correction}\n\n{explanation}".format(
+        correction=" ".join(corrected_sentences),
+        explanation=correction_explanation
+    )
+    return correction_message, ai_output, accountant_message(total_tokens_used)
 
 demo = gradio.Interface(
     fn=chat,
