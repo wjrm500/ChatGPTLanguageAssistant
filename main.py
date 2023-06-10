@@ -10,13 +10,28 @@ import openai
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.DEBUG
+    level=logging.INFO
 )
 logger = logging.getLogger()
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+def check_api_key():
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    if openai.api_key is None:
+        print("You don't seem to have the OpenAI API key set up.")
+        print("Please get your OpenAI API key from https://platform.openai.com/account/api-keys")
+        api_key = input("Enter your OpenAI API key: ").strip()
+        if api_key:
+            with open(".env", "a") as f:
+                f.write(f"OPENAI_API_KEY={api_key}\n")
+            openai.api_key = api_key
+            print("API key saved successfully.")
+        else:
+            print("No API key provided. The program will now exit.")
+            exit()
+
+check_api_key()
 
 COST_PER_1K_TOKENS = 0.002 # USD
 PROMPT_SYSTEM_MAIN = open("prompts/system_main.txt", "r").read()
