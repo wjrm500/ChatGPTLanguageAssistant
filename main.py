@@ -118,7 +118,7 @@ def get_correction_explanation(input_sentence, corrected_sentence):
     return correction_explanation
 
 def change_with_punctuation_or_accent_only(s):
-    match = re.search(r'"(.+)" was changed to "(.+)"', s)
+    match = re.search(r'"(.+?)" was changed to "(.+?)"', s)
     if match:
         x, y = match.groups()
         x_clean = unidecode(x).translate(str.maketrans("", "", string.punctuation)).lower()
