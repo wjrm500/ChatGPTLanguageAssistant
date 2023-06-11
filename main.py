@@ -154,8 +154,12 @@ def chat(user_input):
         else:
             logger.debug(f"Correction explanation {i} passes all checks")
             validated_correction_explanations.append(correction_explanation)
-    correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])
-
+    if len(validated_correction_explanations) == 0:
+        correction_explanation = "No corrections made."
+    elif len(validated_correction_explanations) == 1:
+        correction_explanation = validated_correction_explanations[0]
+    else:
+        correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])
     correction_message = "{correction}\n\n{explanation}".format(
         correction=" ".join(corrected_sentences),
         explanation=correction_explanation
