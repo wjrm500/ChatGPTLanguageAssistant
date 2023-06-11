@@ -36,15 +36,32 @@ def check_api_key():
 check_api_key()
 
 COST_PER_1K_TOKENS = 0.002 # USD
+PROMPT_CONVERSATION_STARTER = open("prompts/conversation_starter.txt", "r").read()
 PROMPT_SYSTEM_MAIN = open("prompts/system_main.txt", "r").read()
 PROMPT_ANALYSE_CORRECTION = open("prompts/analyse_correction.txt", "r").read()
 PROMPT_TRANSLATE_SENTENCE = open("prompts/translate_sentence.txt", "r").read()
 
 main_message_history = [
-    {"role": "system", "content": PROMPT_SYSTEM_MAIN}
+    {"role": "system", "content": PROMPT_SYSTEM_MAIN},
 ]
-
 total_tokens_used = 0
+
+def get_conversation_starter():
+    global total_tokens_used
+    logger.info("Making request for conversation starter...")
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": PROMPT_CONVERSATION_STARTER}
+        ],
+        temperature=1.5,
+    )
+    conversation_starter = completion.choices[0].message.content
+    logger.debug(f"Received conversation starter `{conversation_starter}`")
+    main_message_history.append({"role": "assistant", "content": conversation_starter})
+    tokens_used = completion.usage.total_tokens
+    total_tokens_used += tokens_used
+    return conversation_starter
 
 def accountant_message(total_tokens_used):
     return f"You've spent ${COST_PER_1K_TOKENS * total_tokens_used / 1000:.3f} USD on this conversation."
@@ -166,6 +183,8 @@ def chat(user_input):
     )
     return correction_message, conversation_response, accountant_message(total_tokens_used)
 
+conversation_starter = get_conversation_starter()
+
 demo = gradio.Interface(
     fn=chat,
     inputs=gradio.inputs.Textbox(label="User input", lines=2, placeholder="Say something..."),
@@ -175,7 +194,7 @@ demo = gradio.Interface(
         gradio.outputs.Textbox(label="Accountant")
     ],
     title="Spanish Language Tutor",
-    description="A Spanish language tutor powered by GPT3.5.",
+    description=f"A Spanish language tutor powered by GPT3.5. Your conversation starter is:<br>{conversation_starter}",
 )
 
 demo.launch()
