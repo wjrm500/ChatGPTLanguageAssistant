@@ -2,10 +2,12 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
 import re
+import string
 
 from dotenv import load_dotenv
 import gradio
 import openai
+from unidecode import unidecode
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -98,6 +100,15 @@ def get_correction_explanation(input_sentence, corrected_sentence):
     total_tokens_used += tokens_used
     return correction_explanation
 
+def change_with_punctuation_or_accent_only(s):
+    match = re.search(r'"(.+)" was changed to "(.+)"', s)
+    if match:
+        x, y = match.groups()
+        x_clean = unidecode(x).translate(str.maketrans("", "", string.punctuation)).lower()
+        y_clean = unidecode(y).translate(str.maketrans("", "", string.punctuation)).lower()
+        return x_clean != y_clean
+    return True
+
 def chat(user_input):
     logger.info("Chat initiated by user...")
 
@@ -118,12 +129,19 @@ def chat(user_input):
     correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
     named_checks = [
         ("Does not start with 'No changes'", lambda x: not x.startswith("No changes")),
+        ("Does not start with 'No further changes'", lambda x: not x.startswith("No further changes")),
         ("Does not start with 'No other changes'", lambda x: not x.startswith("No other changes")),
+        ("Does not contain '¿'", lambda x: "¿" not in x),
+        ("Does not contain '¡'", lambda x: "¡" not in x),
         ("Does not contain 'accent'", lambda x: "accent" not in x),
-        ("Does not contain 'brackets'", lambda x: "brackets" not in x),
+        ("Does not contain 'bracket'", lambda x: "bracket" not in x),
+        ("Does not contain 'comma'", lambda x: "comma" not in x),
         ("Does not contain 'exclamation mark'", lambda x: "exclamation mark" not in x),
         ("Does not contain 'exclamation point'", lambda x: "exclamation point" not in x),
+        ("Does not contain 'question mark'", lambda x: "question mark" not in x),
+        ("Does not contain 'the change'", lambda x: "the change" not in x),
         ("Does not contain 'corrected sentence'", lambda x: "corrected sentence" not in x),
+        ("Change with punctuation or accent only", change_with_punctuation_or_accent_only)
     ]
     logger.debug("Checking correction explanations")
     validated_correction_explanations = []
