@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+from textwrap import dedent
 
 from dotenv import load_dotenv
 import gradio
@@ -59,8 +60,7 @@ def conversation_starter(conversation_topic):
         ],
         temperature=0.8,
     )
-    conversation_starter: str = completion.choices[0].message.content
-    conversation_starter = conversation_starter.lstrip("A: ")
+    conversation_starter = completion.choices[0].message.content
     logger.debug(f"Received conversation starter `{conversation_starter}`")
     main_message_history.append({"role": "assistant", "content": conversation_starter})
     tokens_used = completion.usage.total_tokens
@@ -69,6 +69,9 @@ def conversation_starter(conversation_topic):
 
 def accountant_message(total_tokens_used):
     return f"You've spent ${COST_PER_1K_TOKENS * total_tokens_used / 1000:.3f} USD on this conversation."
+
+def dedent_multiline_string(multiline_string):
+    return "\n".join([line.lstrip() for line in multiline_string.split("\n")]).lstrip()
 
 def call_api(user_input):
     global total_tokens_used
@@ -117,16 +120,21 @@ def call_api(user_input):
     resp_dict = json.loads(completion.choices[0].message.to_dict()["function_call"]["arguments"])
     corrected_input = resp_dict["corrected_input"]
     explanations = "\n".join([f"{i}. {x}" for i, x in enumerate(resp_dict["correction_explanations"], 1)])
-    correction_response = f"""Corrected input
----------------
-{corrected_input}
-"""
+    correction_response = dedent_multiline_string(
+        f"""
+        Corrected input
+        ---------------
+        {corrected_input}
+        """
+    )
     if explanations:
-        correction_response += f"""
-Explanations
-------------
-{explanations}
-"""
+        correction_response += dedent_multiline_string(
+            f"""
+            Explanations
+            ------------
+            {explanations}
+            """
+        )
     conversation_response = resp_dict["conversation_response"]
     
     main_message_history.append({"role": "assistant", "content": conversation_response})
