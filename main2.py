@@ -59,7 +59,8 @@ def conversation_starter(conversation_topic):
         ],
         temperature=0.8,
     )
-    conversation_starter = completion.choices[0].message.content
+    conversation_starter: str = completion.choices[0].message.content
+    conversation_starter = conversation_starter.lstrip("A: ")
     logger.debug(f"Received conversation starter `{conversation_starter}`")
     main_message_history.append({"role": "assistant", "content": conversation_starter})
     tokens_used = completion.usage.total_tokens
