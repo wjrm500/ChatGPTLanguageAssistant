@@ -1,13 +1,12 @@
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
-import re
-import string
+import random
 
 from dotenv import load_dotenv
 import gradio
 import openai
-from unidecode import unidecode
+
+from orig_handler import call_api
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -38,23 +37,27 @@ check_api_key()
 COST_PER_1K_TOKENS = 0.002 # USD
 PROMPT_CONVERSATION_STARTER = open("prompts/conversation_starter.txt", "r").read()
 PROMPT_SYSTEM_MAIN = open("prompts/system_main.txt", "r").read()
-PROMPT_ANALYSE_CORRECTION = open("prompts/analyse_correction.txt", "r").read()
-PROMPT_TRANSLATE_SENTENCE = open("prompts/translate_sentence.txt", "r").read()
 
 main_message_history = [
     {"role": "system", "content": PROMPT_SYSTEM_MAIN},
 ]
 total_tokens_used = 0
 
-def get_conversation_starter():
+def conversation_topic():
+    with open("conversation_topics_parsed.txt", "r", encoding="utf-8") as file:
+        lines = file.readlines()
+    return random.choice(lines).strip() # Use strip() to remove the newline character at the end
+
+def conversation_starter(conversation_topic):
     global total_tokens_used
-    logger.info("Making request for conversation starter...")
+    logger.info(f"Making request for conversation starter about topic `{conversation_topic}`...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "user", "content": PROMPT_CONVERSATION_STARTER}
+            {"role": "system", "content": PROMPT_SYSTEM_MAIN},
+            {"role": "user", "content": PROMPT_CONVERSATION_STARTER.format(conversation_topic)}
         ],
-        temperature=1.5,
+        temperature=0.8,
     )
     conversation_starter = completion.choices[0].message.content
     logger.debug(f"Received conversation starter `{conversation_starter}`")
@@ -66,123 +69,15 @@ def get_conversation_starter():
 def accountant_message(total_tokens_used):
     return f"You've spent ${COST_PER_1K_TOKENS * total_tokens_used / 1000:.3f} USD on this conversation."
 
-def get_conversation_response(user_input):
+def chat(user_input):
     global main_message_history
     global total_tokens_used
-    main_message_history.append({"role": "user", "content": user_input})
-    logger.info("Making request for conversation response...")
-    logger.debug(f"Sending user input `{user_input}` for conversation response")
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=main_message_history
-    )
-    conversation_response = completion.choices[0].message.content
-    logger.debug(f"Received conversation response `{conversation_response}` for `{user_input}`")
-    main_message_history.append({"role": "assistant", "content": conversation_response})
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
-    return conversation_response
-
-def get_corrected_sentence(input_sentence):
-    global total_tokens_used
-    prompt = PROMPT_TRANSLATE_SENTENCE.format(sentence=input_sentence)
-    logger.info("Making request for corrected sentence...")
-    logger.debug(f"Sending input sentence `{input_sentence}` for correction")
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    corrected_sentence = completion.choices[0].message.content.replace("\"", "")
-    logger.debug(f"Received corrected sentence `{corrected_sentence}` for `{input_sentence}`")
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
-    return corrected_sentence
-
-def get_correction_explanation(input_sentence, corrected_sentence):
-    global total_tokens_used
-    prompt = PROMPT_ANALYSE_CORRECTION.format(input_sentence=input_sentence, corrected_sentence=corrected_sentence)
-    logger.info("Making request for correction explanation...")
-    logger.debug(f"Sending input sentence `{input_sentence}` and corrected sentence `{corrected_sentence}` for correction explanation")
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    correction_explanation = completion.choices[0].message.content
-    logger.debug(f"Received correction explanation `{correction_explanation}` for input sentence `{input_sentence}` and corrected sentence `{corrected_sentence}`")
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
-    return correction_explanation
-
-def change_with_punctuation_or_accent_only(s):
-    match = re.search(r'"(.+?)" was changed to "(.+?)"', s)
-    if match:
-        x, y = match.groups()
-        x_clean = unidecode(x).translate(str.maketrans("", "", string.punctuation)).lower()
-        y_clean = unidecode(y).translate(str.maketrans("", "", string.punctuation)).lower()
-        return x_clean != y_clean
-    return True
-
-def chat(user_input):
     logger.info("Chat initiated by user...")
+    correction_message, response_message, main_message_history, total_tokens_used = call_api(user_input, main_message_history, total_tokens_used)
+    return correction_message, response_message, accountant_message(total_tokens_used)
 
-    split_regex = r"(?<=[.!?])\s+"
-    input_sentences = re.split(split_regex, user_input)
-    
-    with ThreadPoolExecutor() as executor:
-        conversation_response_future = executor.submit(get_conversation_response, user_input)
-        corrected_sentences_futures = [executor.submit(get_corrected_sentence, sentence) for sentence in input_sentences]
-        
-        conversation_response = conversation_response_future.result()
-        corrected_sentences = [future.result() for future in corrected_sentences_futures]
-
-        correction_explanations_futures = [executor.submit(get_correction_explanation, input_sentence, corrected_sentence) for input_sentence, corrected_sentence in zip(input_sentences, corrected_sentences)]
-        correction_explanations = [future.result() for future in correction_explanations_futures]
-
-    logger.debug("Parsing correction explanations")
-    correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
-    phrases_to_check = [
-        "¿",
-        "¡",
-        "accent",
-        "bracket",
-        "change",
-        "comma",
-        "corrected sentence",
-        "diacritic",
-        "exclamation mark",
-        "exclamation point",
-        "question mark",
-    ]
-    named_checks = [("Does not contain '" + phrase + "'", lambda x: phrase not in x.lower()) for phrase in phrases_to_check]
-    named_checks.append(("Change with punctuation or accent only", change_with_punctuation_or_accent_only))
-    logger.debug("Checking correction explanations")
-    validated_correction_explanations = []
-    for i, correction_explanation in enumerate(correction_explanations, 1):
-        logger.debug(f"Checking correction explanation {i}: `{correction_explanation}`")
-        for name, check in named_checks:
-            if not check(correction_explanation):
-                logger.debug(f"Correction explanation {i} fails check `{name}`")
-                break
-        else:
-            logger.debug(f"Correction explanation {i} passes all checks")
-            validated_correction_explanations.append(correction_explanation)
-    if len(validated_correction_explanations) == 0:
-        correction_explanation = "No corrections made."
-    elif len(validated_correction_explanations) == 1:
-        correction_explanation = validated_correction_explanations[0]
-    else:
-        correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])
-    correction_message = "{correction}\n\n{explanation}".format(
-        correction=" ".join(corrected_sentences),
-        explanation=correction_explanation
-    )
-    return correction_message, conversation_response, accountant_message(total_tokens_used)
-
-conversation_starter = get_conversation_starter()
+conversation_topic = conversation_topic()
+conversation_starter = conversation_starter(conversation_topic)
 
 demo = gradio.Interface(
     fn=chat,
@@ -193,7 +88,7 @@ demo = gradio.Interface(
         gradio.outputs.Textbox(label="Accountant")
     ],
     title="Spanish Language Tutor",
-    description=f"A Spanish language tutor powered by GPT3.5. Your conversation starter is:<br>{conversation_starter}",
+    description=f"<b>A Spanish language tutor powered by GPT3.5</b>.<br><br>Your conversation topic is: <b>{conversation_topic}</b>. Your conversation starter is...<br><br>\"{conversation_starter}\"",
 )
 
 demo.launch()
