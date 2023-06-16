@@ -1,1 +1,1 @@
-Start a conversation in Spanish about the following topic: {}. Your response should be a single, short paragraph in Spanish, written entirely in first-person.
+Write a short sentence in Spanish about your thoughts on the following topic: {}
