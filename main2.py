@@ -44,19 +44,18 @@ main_message_history = [
 ]
 total_tokens_used = 0
 
-def random_conversation_topic():
+def conversation_topic():
     with open("conversation_topics_parsed.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
     return random.choice(lines).strip() # Use strip() to remove the newline character at the end
 
-def conversation_starter():
+def conversation_starter(conversation_topic):
     global total_tokens_used
-    random_topic = random_conversation_topic()
-    logger.info(f"Making request for conversation starter about topic `{random_topic}`...")
+    logger.info(f"Making request for conversation starter about topic `{conversation_topic}`...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "user", "content": PROMPT_CONVERSATION_STARTER.format(random_topic)}
+            {"role": "user", "content": PROMPT_CONVERSATION_STARTER.format(conversation_topic)}
         ],
         temperature=0.8,
     )
@@ -139,7 +138,8 @@ def chat(user_input):
     correction_message, response_message = call_api(user_input)
     return correction_message, response_message, accountant_message(total_tokens_used)
 
-conversation_starter = conversation_starter()
+conversation_topic = conversation_topic()
+conversation_starter = conversation_starter(conversation_topic)
 
 demo = gradio.Interface(
     fn=chat,
@@ -150,7 +150,7 @@ demo = gradio.Interface(
         gradio.outputs.Textbox(label="Accountant")
     ],
     title="Spanish Language Tutor",
-    description=f"A Spanish language tutor powered by GPT3.5. Your conversation starter is:<br>{conversation_starter}",
+    description=f"<b>A Spanish language tutor powered by GPT3.5</b>.<br><br>Your conversation topic is: <b>{conversation_topic}</b>. Your conversation starter is...<br><br>\"{conversation_starter}\"",
 )
 
 demo.launch()
