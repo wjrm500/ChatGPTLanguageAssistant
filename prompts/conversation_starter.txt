@@ -1,1 +1,1 @@
-Write a short sentence in Spanish about your thoughts on the following topic: {}
+Tell me something interesting about the following topic, in Spanish: {}

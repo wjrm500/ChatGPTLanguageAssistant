@@ -56,6 +56,7 @@ def conversation_starter(conversation_topic):
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
+            {"role": "system", "content": PROMPT_SYSTEM_MAIN},
             {"role": "user", "content": PROMPT_CONVERSATION_STARTER.format(conversation_topic)}
         ],
         temperature=0.8,
