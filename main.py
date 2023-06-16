@@ -144,22 +144,21 @@ def chat(user_input):
 
     logger.debug("Parsing correction explanations")
     correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
-    named_checks = [
-        ("Does not start with 'No changes'", lambda x: not x.startswith("No changes")),
-        ("Does not start with 'No further changes'", lambda x: not x.startswith("No further changes")),
-        ("Does not start with 'No other changes'", lambda x: not x.startswith("No other changes")),
-        ("Does not contain '¿'", lambda x: "¿" not in x),
-        ("Does not contain '¡'", lambda x: "¡" not in x),
-        ("Does not contain 'accent'", lambda x: "accent" not in x),
-        ("Does not contain 'bracket'", lambda x: "bracket" not in x),
-        ("Does not contain 'comma'", lambda x: "comma" not in x),
-        ("Does not contain 'exclamation mark'", lambda x: "exclamation mark" not in x),
-        ("Does not contain 'exclamation point'", lambda x: "exclamation point" not in x),
-        ("Does not contain 'question mark'", lambda x: "question mark" not in x),
-        ("Does not contain 'the change'", lambda x: "the change" not in x),
-        ("Does not contain 'corrected sentence'", lambda x: "corrected sentence" not in x),
-        ("Change with punctuation or accent only", change_with_punctuation_or_accent_only)
+    phrases_to_check = [
+        "¿",
+        "¡",
+        "accent",
+        "bracket",
+        "change",
+        "comma",
+        "corrected sentence",
+        "diacritic",
+        "exclamation mark",
+        "exclamation point",
+        "question mark",
     ]
+    named_checks = [("Does not contain '" + phrase + "'", lambda x: phrase not in x.lower()) for phrase in phrases_to_check]
+    named_checks.append(("Change with punctuation or accent only", change_with_punctuation_or_accent_only))
     logger.debug("Checking correction explanations")
     validated_correction_explanations = []
     for i, correction_explanation in enumerate(correction_explanations, 1):
