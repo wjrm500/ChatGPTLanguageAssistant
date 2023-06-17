@@ -17,11 +17,11 @@ PROMPT_ANALYSE_CORRECTION = open("prompts/analyse_correction.txt", "r").read()
 PROMPT_TRANSLATE_SENTENCE = open("prompts/translate_sentence.txt", "r").read()
 
 main_message_history = None
-total_tokens_used = None
+input_tokens_used = None
+output_tokens_used = None
 
 def get_conversation_response(user_input):
-    global main_message_history
-    global total_tokens_used
+    global main_message_history, input_tokens_used, output_tokens_used
     main_message_history.append({"role": "user", "content": user_input})
     logger.info("Making request for conversation response...")
     logger.debug(f"Sending user input `{user_input}` for conversation response")
@@ -33,12 +33,12 @@ def get_conversation_response(user_input):
     conversation_response = completion.choices[0].message.content
     logger.debug(f"Received conversation response `{conversation_response}` for `{user_input}`")
     main_message_history.append({"role": "assistant", "content": conversation_response})
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
+    input_tokens_used += completion.usage.prompt_tokens
+    output_tokens_used += completion.usage.completion_tokens
     return conversation_response
 
 def get_corrected_sentence(input_sentence):
-    global total_tokens_used
+    global input_tokens_used, output_tokens_used
     prompt = PROMPT_TRANSLATE_SENTENCE.format(sentence=input_sentence)
     logger.info("Making request for corrected sentence...")
     logger.debug(f"Sending input sentence `{input_sentence}` for correction")
@@ -51,12 +51,12 @@ def get_corrected_sentence(input_sentence):
     )
     corrected_sentence = completion.choices[0].message.content.replace("\"", "")
     logger.debug(f"Received corrected sentence `{corrected_sentence}` for `{input_sentence}`")
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
+    input_tokens_used += completion.usage.prompt_tokens
+    output_tokens_used += completion.usage.completion_tokens
     return corrected_sentence
 
 def get_correction_explanation(input_sentence, corrected_sentence):
-    global total_tokens_used
+    global input_tokens_used, output_tokens_used
     prompt = PROMPT_ANALYSE_CORRECTION.format(input_sentence=input_sentence, corrected_sentence=corrected_sentence)
     logger.info("Making request for correction explanation...")
     logger.debug(f"Sending input sentence `{input_sentence}` and corrected sentence `{corrected_sentence}` for correction explanation")
@@ -69,15 +69,15 @@ def get_correction_explanation(input_sentence, corrected_sentence):
     )
     correction_explanation = completion.choices[0].message.content
     logger.debug(f"Received correction explanation `{correction_explanation}` for input sentence `{input_sentence}` and corrected sentence `{corrected_sentence}`")
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
+    input_tokens_used += completion.usage.prompt_tokens
+    output_tokens_used += completion.usage.completion_tokens
     return correction_explanation
 
-def call_api(user_input, _main_message_history, _total_tokens_used):
-    global main_message_history
-    global total_tokens_used
+def call_api(user_input, _main_message_history, _input_tokens_used, _output_tokens_used):
+    global main_message_history, input_tokens_used, output_tokens_used
     main_message_history = _main_message_history
-    total_tokens_used = _total_tokens_used
+    input_tokens_used = _input_tokens_used
+    output_tokens_used = _output_tokens_used
     logger.info("Chat initiated by user...")
 
     split_regex = r"(?<=[.!?])\s+"
@@ -99,4 +99,4 @@ def call_api(user_input, _main_message_history, _total_tokens_used):
         correction=" ".join(corrected_sentences),
         explanation=correction_explanation
     )
-    return correction_response, conversation_response, main_message_history, total_tokens_used
+    return correction_response, conversation_response, main_message_history, input_tokens_used, output_tokens_used

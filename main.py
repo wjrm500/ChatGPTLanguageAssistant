@@ -34,14 +34,16 @@ def check_api_key():
 
 check_api_key()
 
-COST_PER_1K_TOKENS = 0.002 # USD
+COST_PER_1K_INPUT_TOKENS = 0.0015 # USD
+COST_PER_1K_OUTPUT_TOKENS = 0.002 # USD
 PROMPT_CONVERSATION_STARTER = open("prompts/conversation_starter.txt", "r").read()
 PROMPT_SYSTEM_MAIN = open("prompts/system_main.txt", "r").read()
 
 main_message_history = [
     {"role": "system", "content": PROMPT_SYSTEM_MAIN},
 ]
-total_tokens_used = 0
+input_tokens_used = 0
+output_tokens_used = 0
 
 def conversation_topic():
     with open("conversation_topics_parsed.txt", "r", encoding="utf-8") as file:
@@ -49,7 +51,7 @@ def conversation_topic():
     return random.choice(lines).strip() # Use strip() to remove the newline character at the end
 
 def conversation_starter(conversation_topic):
-    global total_tokens_used
+    global input_tokens_used, output_tokens_used
     logger.info(f"Making request for conversation starter about topic `{conversation_topic}`...")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -62,19 +64,20 @@ def conversation_starter(conversation_topic):
     conversation_starter = completion.choices[0].message.content
     logger.debug(f"Received conversation starter `{conversation_starter}`")
     main_message_history.append({"role": "assistant", "content": conversation_starter})
-    tokens_used = completion.usage.total_tokens
-    total_tokens_used += tokens_used
+    input_tokens_used += completion.usage.prompt_tokens
+    output_tokens_used += completion.usage.completion_tokens
     return conversation_starter
 
-def accountant_message(total_tokens_used):
-    return f"You've spent ${COST_PER_1K_TOKENS * total_tokens_used / 1000:.3f} USD on this conversation."
+def accountant_message(input_tokens_used, output_tokens_used):
+    input_cost = COST_PER_1K_INPUT_TOKENS * input_tokens_used / 1000
+    output_cost = COST_PER_1K_OUTPUT_TOKENS * output_tokens_used / 1000
+    return f"You've spent ${input_cost + output_cost:.3f} USD on this conversation. You've used {input_tokens_used} input tokens and {output_tokens_used} output tokens."
 
 def chat(user_input):
-    global main_message_history
-    global total_tokens_used
+    global main_message_history, input_tokens_used, output_tokens_used
     logger.info("Chat initiated by user...")
-    correction_message, response_message, main_message_history, total_tokens_used = call_api(user_input, main_message_history, total_tokens_used)
-    return correction_message, response_message, accountant_message(total_tokens_used)
+    correction_message, response_message, main_message_history, input_tokens_used, output_tokens_used = call_api(user_input, main_message_history, input_tokens_used, output_tokens_used)
+    return correction_message, response_message, accountant_message(input_tokens_used, output_tokens_used)
 
 conversation_topic = conversation_topic()
 conversation_starter = conversation_starter(conversation_topic)
