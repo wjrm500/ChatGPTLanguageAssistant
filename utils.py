@@ -1,6 +1,7 @@
 import logging
 import re
 import string
+from typing import Callable
 
 from unidecode import unidecode
 
@@ -27,11 +28,11 @@ PHRASES_TO_CHECK = [
 ]
 
 
-def _check_closure(phrase):
+def _check_closure(phrase: str) -> Callable:
     return lambda x: phrase not in x.lower()
 
 
-def _change_with_punctuation_or_accent_only(s):
+def _change_with_punctuation_or_accent_only(s: str) -> bool:
     match = re.search(r'"(.+?)" was changed to "(.+?)"', s)
     if match:
         x, y = match.groups()

@@ -1,13 +1,13 @@
 import re
 
 
-def split_by_delimiters(text, delimiters):
+def split_by_delimiters(text: str, delimiters: list[str]) -> list[str]:
     regexPattern = "|".join(map(re.escape, delimiters))
     pieces = re.split(regexPattern, text)
     return pieces
 
 
-def split_by_uppercase(text):
+def split_by_uppercase(text: str) -> list[str]:
     return re.split("(?<=[a-z])(?=[A-Z])", text)
 
 

@@ -13,11 +13,16 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-def dedent_multiline_string(multiline_string):
+def dedent_multiline_string(multiline_string: str) -> str:
     return "\n".join([line.lstrip() for line in multiline_string.split("\n")]).lstrip()
 
 
-def call_api(user_input, main_message_history, input_tokens_used, output_tokens_used):
+def call_api(
+    user_input: str,
+    main_message_history: list,
+    input_tokens_used: int,
+    output_tokens_used: int,
+) -> tuple:
     function_definition = {
         "name": "receive_outputs",
         "description": "A function that receives outputs",
