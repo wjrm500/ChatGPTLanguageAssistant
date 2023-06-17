@@ -28,7 +28,6 @@ def validate_correction_explanations(correction_explanations: list[str]) -> str:
         "¡",
         "accent",
         "bracket",
-        "change",
         "comma",
         "corrected sentence",
         "diacritic",
