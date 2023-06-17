@@ -1,15 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import re
-import string
 
 import openai
-from unidecode import unidecode
+
+from utils import validate_correction_explanations
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO
+    level=logging.DEBUG
 )
 logger = logging.getLogger()
 
@@ -70,15 +70,6 @@ def get_correction_explanation(input_sentence, corrected_sentence):
     total_tokens_used += tokens_used
     return correction_explanation
 
-def change_with_punctuation_or_accent_only(s):
-    match = re.search(r'"(.+?)" was changed to "(.+?)"', s)
-    if match:
-        x, y = match.groups()
-        x_clean = unidecode(x).translate(str.maketrans("", "", string.punctuation)).lower()
-        y_clean = unidecode(y).translate(str.maketrans("", "", string.punctuation)).lower()
-        return x_clean != y_clean
-    return True
-
 def call_api(user_input, _main_message_history, _total_tokens_used):
     global main_message_history
     global total_tokens_used
@@ -98,43 +89,11 @@ def call_api(user_input, _main_message_history, _total_tokens_used):
 
         correction_explanations_futures = [executor.submit(get_correction_explanation, input_sentence, corrected_sentence) for input_sentence, corrected_sentence in zip(input_sentences, corrected_sentences)]
         correction_explanations = [future.result() for future in correction_explanations_futures]
-
-    logger.debug("Parsing correction explanations")
-    correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
-    phrases_to_check = [
-        "¿",
-        "¡",
-        "accent",
-        "bracket",
-        "change",
-        "comma",
-        "corrected sentence",
-        "diacritic",
-        "exclamation mark",
-        "exclamation point",
-        "question mark",
-    ]
-    named_checks = [("Does not contain '" + phrase + "'", lambda x: phrase not in x.lower()) for phrase in phrases_to_check]
-    named_checks.append(("Change with punctuation or accent only", change_with_punctuation_or_accent_only))
-    logger.debug("Checking correction explanations")
-    validated_correction_explanations = []
-    for i, correction_explanation in enumerate(correction_explanations, 1):
-        logger.debug(f"Checking correction explanation {i}: `{correction_explanation}`")
-        for name, check in named_checks:
-            if not check(correction_explanation):
-                logger.debug(f"Correction explanation {i} fails check `{name}`")
-                break
-        else:
-            logger.debug(f"Correction explanation {i} passes all checks")
-            validated_correction_explanations.append(correction_explanation)
-    if len(validated_correction_explanations) == 0:
-        correction_explanation = "No corrections made."
-    elif len(validated_correction_explanations) == 1:
-        correction_explanation = validated_correction_explanations[0]
-    else:
-        correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])
+    
+    validated_correction_explanation = validate_correction_explanations(correction_explanations)
+    
     correction_response = "{correction}\n\n{explanation}".format(
         correction=" ".join(corrected_sentences),
-        explanation=correction_explanation
+        explanation=validated_correction_explanation
     )
     return correction_response, conversation_response, main_message_history, total_tokens_used

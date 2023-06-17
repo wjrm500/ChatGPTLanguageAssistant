@@ -3,6 +3,8 @@ import logging
 
 import openai
 
+from utils import validate_correction_explanations
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -56,27 +58,18 @@ def call_api(user_input, main_message_history, total_tokens_used):
         temperature=0.1
     )
     logger.debug(f"Received response for `{user_input}`")
-    resp_dict = json.loads(completion.choices[0].message.to_dict()["function_call"]["arguments"])
-    corrected_input = resp_dict["corrected_input"]
-    explanations = "\n".join([f"{i}. {x}" for i, x in enumerate(resp_dict["correction_explanations"], 1)])
-    correction_response = dedent_multiline_string(
-        f"""
-        Corrected input
-        ---------------
-        {corrected_input}
-        """
-    )
-    if explanations:
-        correction_response += dedent_multiline_string(
-            f"""
-            Explanations
-            ------------
-            {explanations}
-            """
-        )
-    conversation_response = resp_dict["conversation_response"]
-    
     main_message_history.append({"role": "assistant", "content": conversation_response})
     tokens_used = completion.usage.total_tokens
     total_tokens_used += tokens_used
+
+    resp_dict = json.loads(completion.choices[0].message.to_dict()["function_call"]["arguments"])
+    corrected_input = resp_dict["corrected_input"]
+    correction_explanations = resp_dict["correction_explanations"]
+    validated_correction_explanation = validate_correction_explanations(correction_explanations)
+
+    correction_response = "{correction}\n\n{explanation}".format(
+        correction=corrected_input,
+        explanation=validated_correction_explanation
+    )
+    conversation_response = resp_dict["conversation_response"]
     return correction_response, conversation_response, main_message_history, total_tokens_used
