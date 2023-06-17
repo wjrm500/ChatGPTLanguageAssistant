@@ -50,15 +50,13 @@ input_tokens_used = 0
 output_tokens_used = 0
 
 
-def conversation_topic():
+def conversation_topic() -> str:
     with open("conversation_topics_parsed.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
-    return random.choice(
-        lines
-    ).strip()  # Use strip() to remove the newline character at the end
+    return random.choice(lines).strip()
 
 
-def conversation_starter(conversation_topic):
+def conversation_starter(conversation_topic: str) -> str:
     global input_tokens_used, output_tokens_used
     logger.info(
         f"Making request for conversation starter about topic `{conversation_topic}`..."
@@ -82,13 +80,13 @@ def conversation_starter(conversation_topic):
     return conversation_starter
 
 
-def accountant_message(input_tokens_used, output_tokens_used):
+def accountant_message(input_tokens_used: int, output_tokens_used: int) -> str:
     input_cost = COST_PER_1K_INPUT_TOKENS * input_tokens_used / 1000
     output_cost = COST_PER_1K_OUTPUT_TOKENS * output_tokens_used / 1000
     return f"You've spent ${input_cost + output_cost:.3f} USD on this conversation. You've used {input_tokens_used} input tokens and {output_tokens_used} output tokens."
 
 
-def chat(user_input):
+def chat(user_input: str) -> tuple:
     global main_message_history, input_tokens_used, output_tokens_used
     logger.info("Chat initiated by user...")
     (
@@ -107,8 +105,8 @@ def chat(user_input):
     )
 
 
-conversation_topic = conversation_topic()
-conversation_starter = conversation_starter(conversation_topic)
+convo_topic = conversation_topic()
+convo_starter = conversation_starter(convo_topic)
 
 demo = gradio.Interface(
     fn=chat,
@@ -121,7 +119,7 @@ demo = gradio.Interface(
         gradio.outputs.Textbox(label="Accountant"),
     ],
     title="Spanish Language Tutor",
-    description=f'<b>A Spanish language tutor powered by GPT3.5</b>.<br><br>Your conversation topic is: <b>{conversation_topic}</b>. Your conversation starter is...<br><br>"{conversation_starter}"',
+    description=f'<b>A Spanish language tutor powered by GPT3.5</b>.<br><br>Your conversation topic is: <b>{convo_topic}</b>. Your conversation starter is...<br><br>"{convo_starter}"',
 )
 
 demo.launch()
