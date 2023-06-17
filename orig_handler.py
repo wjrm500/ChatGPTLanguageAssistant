@@ -27,7 +27,8 @@ def get_conversation_response(user_input):
     logger.debug(f"Sending user input `{user_input}` for conversation response")
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=main_message_history
+        messages=main_message_history,
+        temperature=0.8
     )
     conversation_response = completion.choices[0].message.content
     logger.debug(f"Received conversation response `{conversation_response}` for `{user_input}`")
@@ -45,7 +46,8 @@ def get_corrected_sentence(input_sentence):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": prompt}
-        ]
+        ],
+        temperature=0.2
     )
     corrected_sentence = completion.choices[0].message.content.replace("\"", "")
     logger.debug(f"Received corrected sentence `{corrected_sentence}` for `{input_sentence}`")
@@ -62,7 +64,8 @@ def get_correction_explanation(input_sentence, corrected_sentence):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": prompt}
-        ]
+        ],
+        temperature=0.2
     )
     correction_explanation = completion.choices[0].message.content
     logger.debug(f"Received correction explanation `{correction_explanation}` for input sentence `{input_sentence}` and corrected sentence `{corrected_sentence}`")
@@ -91,7 +94,7 @@ def call_api(user_input, _main_message_history, _total_tokens_used):
         correction_explanations = [future.result() for future in correction_explanations_futures]
     
     validated_correction_explanation = validate_correction_explanations(correction_explanations)
-    
+
     correction_response = "{correction}\n\n{explanation}".format(
         correction=" ".join(corrected_sentences),
         explanation=validated_correction_explanation
