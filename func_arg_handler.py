@@ -64,13 +64,14 @@ def call_api(user_input, main_message_history, input_tokens_used, output_tokens_
         temperature=0.1,
     )
     logger.debug(f"Received response for `{user_input}`")
+    resp_dict = json.loads(
+        completion.choices[0].message.to_dict()["function_call"]["arguments"]
+    )
+    conversation_response = resp_dict["conversation_response"]
     main_message_history.append({"role": "assistant", "content": conversation_response})
     input_tokens_used += completion.usage.prompt_tokens
     output_tokens_used += completion.usage.completion_tokens
 
-    resp_dict = json.loads(
-        completion.choices[0].message.to_dict()["function_call"]["arguments"]
-    )
     corrected_input = resp_dict["corrected_input"]
     correction_explanations = resp_dict["correction_explanations"]
     correction_explanation = parse_correction_explanations(correction_explanations)
@@ -78,7 +79,6 @@ def call_api(user_input, main_message_history, input_tokens_used, output_tokens_
     correction_response = "{correction}\n\n{explanation}".format(
         correction=corrected_input, explanation=correction_explanation
     )
-    conversation_response = resp_dict["conversation_response"]
     return (
         correction_response,
         conversation_response,
