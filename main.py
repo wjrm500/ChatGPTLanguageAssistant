@@ -18,7 +18,7 @@ logger = logging.getLogger()
 load_dotenv()
 
 
-def check_api_key():
+def check_api_key() -> None:
     openai.api_key = os.getenv("OPENAI_API_KEY")
     if openai.api_key is None:
         print("You don't seem to have the OpenAI API key set up.")

@@ -16,13 +16,15 @@ logger = logging.getLogger()
 PROMPT_ANALYSE_CORRECTION = open("prompts/analyse_correction.txt", "r").read()
 PROMPT_TRANSLATE_SENTENCE = open("prompts/translate_sentence.txt", "r").read()
 
-main_message_history = None
-input_tokens_used = None
-output_tokens_used = None
+main_message_history: list | None = None
+input_tokens_used: int | None = None
+output_tokens_used: int | None = None
 
 
-def get_conversation_response(user_input):
+def get_conversation_response(user_input: str) -> str:
     global main_message_history, input_tokens_used, output_tokens_used
+    if main_message_history is None:
+        raise ValueError("main_message_history is not set")
     main_message_history.append({"role": "user", "content": user_input})
     logger.info("Making request for conversation response...")
     logger.debug(f"Sending user input `{user_input}` for conversation response")
@@ -39,7 +41,7 @@ def get_conversation_response(user_input):
     return conversation_response
 
 
-def get_corrected_sentence(input_sentence):
+def get_corrected_sentence(input_sentence: str) -> str:
     global input_tokens_used, output_tokens_used
     prompt = PROMPT_TRANSLATE_SENTENCE.format(sentence=input_sentence)
     logger.info("Making request for corrected sentence...")
@@ -58,7 +60,7 @@ def get_corrected_sentence(input_sentence):
     return corrected_sentence
 
 
-def get_correction_explanation(input_sentence, corrected_sentence):
+def get_correction_explanation(input_sentence: str, corrected_sentence: str) -> str:
     global input_tokens_used, output_tokens_used
     prompt = PROMPT_ANALYSE_CORRECTION.format(
         input_sentence=input_sentence, corrected_sentence=corrected_sentence
@@ -82,8 +84,11 @@ def get_correction_explanation(input_sentence, corrected_sentence):
 
 
 def call_api(
-    user_input, _main_message_history, _input_tokens_used, _output_tokens_used
-):
+    user_input: str,
+    _main_message_history: list,
+    _input_tokens_used: int,
+    _output_tokens_used: int,
+) -> tuple:
     global main_message_history, input_tokens_used, output_tokens_used
     main_message_history = _main_message_history
     input_tokens_used = _input_tokens_used
