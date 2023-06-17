@@ -11,6 +11,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
+PHRASES_TO_CHECK = [
+    "¿",
+    "¡",
+    "accent",
+    "bracket",
+    "comma",
+    "corrected sentence",
+    "diacritic",
+    "exclamation mark",
+    "exclamation point",
+    "question mark",
+]
+
+def _check_closure(phrase):
+    return lambda x: phrase not in x.lower()
+
 def _change_with_punctuation_or_accent_only(s):
     match = re.search(r'"(.+?)" was changed to "(.+?)"', s)
     if match:
@@ -20,40 +36,27 @@ def _change_with_punctuation_or_accent_only(s):
         return x_clean != y_clean
     return True
 
-def validate_correction_explanations(correction_explanations: list[str]) -> str:
-    logger.debug("Parsing correction explanations")
-    correction_explanations = [y.split("|")[1].lstrip().rstrip(".") for x in correction_explanations for y in x.split("\n") if "|" in y]
-    phrases_to_check = [
-        "¿",
-        "¡",
-        "accent",
-        "bracket",
-        "comma",
-        "corrected sentence",
-        "diacritic",
-        "exclamation mark",
-        "exclamation point",
-        "question mark",
-    ]
-    def make_check(phrase):
-        return lambda x: phrase not in x.lower()
-    named_checks = [("Does not contain '" + phrase + "'", make_check(phrase)) for phrase in phrases_to_check]
-    named_checks.append(("Change with punctuation or accent only", _change_with_punctuation_or_accent_only))
-    logger.debug("Checking correction explanations")
-    validated_correction_explanations = []
-    for i, correction_explanation in enumerate(correction_explanations, 1):
-        logger.debug(f"Checking correction explanation {i}: `{correction_explanation}`")
-        for name, check in named_checks:
-            if not check(correction_explanation):
-                logger.debug(f"Correction explanation {i} fails check `{name}`")
-                break
-        else:
-            logger.debug(f"Correction explanation {i} passes all checks")
-            validated_correction_explanations.append(correction_explanation)
-    if len(validated_correction_explanations) == 0:
-        correction_explanation = "No corrections made."
-    elif len(validated_correction_explanations) == 1:
-        correction_explanation = validated_correction_explanations[0]
+named_checks = [("Does not contain '" + phrase + "'", _check_closure(phrase)) for phrase in PHRASES_TO_CHECK]
+named_checks.append(("Change with punctuation or accent only", _change_with_punctuation_or_accent_only))
+
+def validate_correction_explanation(correction_explanation: str) -> bool:
+    logger.debug("Parsing correction explanation `{correction_explanation}`")
+    correction_explanation = correction_explanation.split("|")[1].strip(" .")
+    
+    logger.debug(f"Checking correction explanation `{correction_explanation}` for filter phrases")
+    for name, check in named_checks:
+        if not check(correction_explanation):
+            logger.debug(f"Correction explanation `{correction_explanation}` fails check `{name}`")
+            return False
     else:
-        correction_explanation = "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])
-    return correction_explanation
+        logger.debug(f"Correction explanation `{correction_explanation}` passes all checks")
+        return True
+
+def parse_correction_explanations(correction_explanations: list[str]) -> str:
+    validated_correction_explanations = [x for x in correction_explanations if validate_correction_explanation(x)]
+    if len(validated_correction_explanations) == 0:
+        return "No corrections made."
+    elif len(validated_correction_explanations) == 1:
+        return validated_correction_explanations[0]
+    else:
+        return "\n".join([f"{i}. {x}" for i, x in enumerate(validated_correction_explanations, 1)])

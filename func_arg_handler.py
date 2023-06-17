@@ -3,7 +3,7 @@ import logging
 
 import openai
 
-from utils import validate_correction_explanations
+from utils import parse_correction_explanations
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -65,11 +65,11 @@ def call_api(user_input, main_message_history, total_tokens_used):
     resp_dict = json.loads(completion.choices[0].message.to_dict()["function_call"]["arguments"])
     corrected_input = resp_dict["corrected_input"]
     correction_explanations = resp_dict["correction_explanations"]
-    validated_correction_explanation = validate_correction_explanations(correction_explanations)
+    correction_explanation = parse_correction_explanations(correction_explanations)
 
     correction_response = "{correction}\n\n{explanation}".format(
         correction=corrected_input,
-        explanation=validated_correction_explanation
+        explanation=correction_explanation
     )
     conversation_response = resp_dict["conversation_response"]
     return correction_response, conversation_response, main_message_history, total_tokens_used
