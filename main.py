@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import gradio
 import openai
 
-# from orig_handler import call_api
 from new_handler import call_api
 
 logging.basicConfig(

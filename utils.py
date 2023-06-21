@@ -75,7 +75,9 @@ def validated_correction_explanation(correction_explanation: str) -> str:
         return correction_explanation
 
 
-def parse_correction_explanations(correction_explanations: list[str], validate: bool = True) -> str:
+def parse_correction_explanations(
+    correction_explanations: list[str], validate: bool = True
+) -> str:
     if validate:
         validated_correction_explanations = [
             validated_correction_explanation(y)

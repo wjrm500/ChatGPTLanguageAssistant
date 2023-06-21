@@ -53,15 +53,15 @@ def get_corrected_input(input_str: str) -> str:
         temperature=0.2,
     )
     corrected_input = completion.choices[0].message.content.replace('"', "")
-    logger.debug(
-        f"Received corrected input `{corrected_input}` for `{input_str}`"
-    )
+    logger.debug(f"Received corrected input `{corrected_input}` for `{input_str}`")
     input_tokens_used += completion.usage.prompt_tokens
     output_tokens_used += completion.usage.completion_tokens
     return corrected_input
 
 
-def get_correction_tuples(input_str: str, corrected_input: str) -> list[tuple[str, str]]:
+def get_correction_tuples(
+    input_str: str, corrected_input: str
+) -> list[tuple[str, str]]:
     global input_tokens_used, output_tokens_used
     prompt = PROMPT_CORRECTION_TUPLES.format(
         input_text=input_str, corrected_text=corrected_input
@@ -100,7 +100,9 @@ def get_correction_tuples(input_str: str, corrected_input: str) -> list[tuple[st
         function_call={"name": "receive_outputs"},
         temperature=0.1,
     )
-    logger.debug(f"Received response for correction tuples for `{input_str}` and `{corrected_input}`")
+    logger.debug(
+        f"Received response for correction tuples for `{input_str}` and `{corrected_input}`"
+    )
     resp_dict = json.loads(
         completion.choices[0].message.to_dict()["function_call"]["arguments"]
     )
@@ -111,7 +113,9 @@ def get_correction_tuples(input_str: str, corrected_input: str) -> list[tuple[st
     return correction_tuples
 
 
-def get_correction_explanation(input_phrase: str, corrected_phrase: str, entire_correction: str) -> str:
+def get_correction_explanation(
+    input_phrase: str, corrected_phrase: str, entire_correction: str
+) -> str:
     global input_tokens_used, output_tokens_used
     prompt = PROMPT_EXPLAIN_CORRECTION.format(
         input_phrase=input_phrase,
@@ -152,9 +156,7 @@ def call_api(
         conversation_response_future = executor.submit(
             get_conversation_response, user_input
         )
-        corrected_input_future = executor.submit(
-            get_corrected_input, user_input
-        )
+        corrected_input_future = executor.submit(get_corrected_input, user_input)
 
         conversation_response = conversation_response_future.result()
         corrected_input = corrected_input_future.result()
@@ -166,7 +168,10 @@ def call_api(
 
         correction_explanations_futures = [
             executor.submit(
-                get_correction_explanation, input_phrase, corrected_phrase, corrected_input
+                get_correction_explanation,
+                input_phrase,
+                corrected_phrase,
+                corrected_input,
             )
             for input_phrase, corrected_phrase in correction_tuples
         ]
@@ -174,7 +179,9 @@ def call_api(
             future.result() for future in correction_explanations_futures
         ]
 
-    correction_explanation = parse_correction_explanations(correction_explanations, validate=False)
+    correction_explanation = parse_correction_explanations(
+        correction_explanations, validate=False
+    )
 
     correction_response = "{correction}\n\n{explanation}".format(
         correction=corrected_input, explanation=correction_explanation
