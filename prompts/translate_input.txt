@@ -1,0 +1,7 @@
+Provide a corrected Spanish translation of the following input:
+
+"{input_str}"
+
+Your answer should be the corrected input in quotation marks, nothing more.
+
+If the input includes an English word inside square brackets, simply translate the word into Spanish and remove the square brackets.

@@ -1,0 +1,5 @@
+Break the following two texts down into phrases or small clauses and match them up, outputting a list of two-tuples:
+
+Input text: {input_text}
+
+Corrected text: {corrected_text}

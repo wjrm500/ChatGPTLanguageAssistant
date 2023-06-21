@@ -75,16 +75,19 @@ def validated_correction_explanation(correction_explanation: str) -> str:
         return correction_explanation
 
 
-def parse_correction_explanations(correction_explanations: list[str]) -> str:
-    validated_correction_explanations = [
-        validated_correction_explanation(y)
-        for x in correction_explanations
-        for y in x.split("\n")
-        if "|" in y
-    ]
-    validated_correction_explanations = [
-        x for x in validated_correction_explanations if x
-    ]
+def parse_correction_explanations(correction_explanations: list[str], validate: bool = True) -> str:
+    if validate:
+        validated_correction_explanations = [
+            validated_correction_explanation(y)
+            for x in correction_explanations
+            for y in x.split("\n")
+            if "|" in y
+        ]
+        validated_correction_explanations = [
+            x for x in validated_correction_explanations if x
+        ]
+    else:
+        validated_correction_explanations = correction_explanations
     if len(validated_correction_explanations) == 0:
         return "No corrections made."
     elif len(validated_correction_explanations) == 1:

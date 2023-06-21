@@ -1,0 +1,7 @@
+Compare these two Spanish phrases, and explain why correction was made:
+
+Input phrase: "{input_phrase}"
+
+Corrected phrase: "{corrected_phrase}"
+
+For context, the entire corrected text is: "{entire_correction}"
