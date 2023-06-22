@@ -51,7 +51,6 @@ output_tokens_used = 0
 
 
 def conversation_topic() -> str:
-    return "Climate change"
     with open("conversation_topics_parsed.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
     return random.choice(lines).strip()
